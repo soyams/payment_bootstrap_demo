@@ -52,58 +52,65 @@ _payment=async function(response){
       return chainId;
     })
     console.log("Current ChainId: ",chainId)
-    const contract=await $.getJSON('./build/contracts/CryptoPay.json').then(jsonData=>{
-      return jsonData;  
-    });
-    console.log()
-    const contractABI=contract.abi
-    const _contractAddress=contract.networks[chainId].address   
-    console.log(_contractAddress)
-    paymentContract= web3.eth.contract(contractABI).at(_contractAddress)
-    console.log(paymentContract)
-
-    if(web3.eth.defaultAccount!=_from){
-        web3.eth.defaultAccount=_from
-    }
-    try{
-        const _gasPrice= await web3.eth.getGasPrice((err,_gasPrice)=>{
-          if(!err){
-            console.log("Estimate Gas Price: "+web3.fromWei(JSON.parse(_gasPrice),'Gwei')+" Gwei")
-            return _gasPrice;
-          }
-          else{
-            console.log(err)
-          }
-        })
-        const _estimatedGas=await web3.eth.estimateGas({from:web3.eth.defaultAccount},(err,_estimateGas)=>{
-          console.log("Estimate Gas Limit: "+_estimateGas)
-          return _estimateGas;
-        })
-        await paymentContract._payment(_from,_to,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
-          console.log("transaction id: ",_txId) 
-          if(_txId!=null){
-              console.log(_txId)
-              document.getElementById('loading').style.display="block"
-              //set a condition here
-              await _eventTransfer(_txId);
+    if(chainId=="5"){
+      const contract=await $.getJSON('./build/contracts/CryptoPay.json').then(jsonData=>{
+        return jsonData;  
+      });
+      console.log()
+      const contractABI=contract.abi
+      const _contractAddress=contract.networks[chainId].address   
+      console.log(_contractAddress)
+      paymentContract= web3.eth.contract(contractABI).at(_contractAddress)
+      console.log(paymentContract)
+  
+      if(web3.eth.defaultAccount!=_from){
+          web3.eth.defaultAccount=_from
+      }
+      try{
+          const _gasPrice= await web3.eth.getGasPrice((err,_gasPrice)=>{
+            if(!err){
+              console.log("Estimate Gas Price: "+web3.fromWei(JSON.parse(_gasPrice),'Gwei')+" Gwei")
+              return _gasPrice;
             }
             else{
               console.log(err)
-              document.getElementById('error_msg').style.display="block"
-              document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-              setTimeout(function(){
-                location.reload()},9000)
             }
-
-        })
-        
-    }catch(err){
-        console.log(err)
-        alert("transaction revert.")
-        document.getElementById('error_msg').style.display="block"
-        document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-        
+          })
+          const _estimatedGas=await web3.eth.estimateGas({from:web3.eth.defaultAccount},(err,_estimateGas)=>{
+            console.log("Estimate Gas Limit: "+_estimateGas)
+            return _estimateGas;
+          })
+          await paymentContract._payment(_from,_to,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
+            console.log("transaction id: ",_txId) 
+            if(_txId!=null){
+                console.log(_txId)
+                document.getElementById('loading').style.display="block"
+                //set a condition here
+                await _eventTransfer(_txId);
+              }
+              else{
+                console.log(err)
+                document.getElementById('error_msg').style.display="block"
+                document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
+                setTimeout(function(){
+                  location.reload()},9000)
+              }
+  
+          })
+          
+      }catch(err){
+          console.log(err)
+          alert("transaction revert.")
+          document.getElementById('error_msg').style.display="block"
+          document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
+          
+      }
     }
+    else{
+      console.log("change ethereum network to goerli only.")
+      alert("change ethereum network to goerli only.");
+    }
+    
 }
 _eventTransfer=async function(_txId){
 

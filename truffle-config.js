@@ -2,7 +2,9 @@ require('dotenv').config();
 const HDWalletProvider=require("@truffle/hdwallet-provider");
 
 module.exports = {
-
+  contracts_directory:"./contracts",
+  contracts_build_directory:"./src/build/contracts",
+  migrations_directory:"./migrations",
   networks: {
     development: {
       host: process.env.LOCAL_HOST,

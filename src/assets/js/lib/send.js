@@ -41,9 +41,8 @@ _getAccount=async function(){
     _payment();
 },
 
-_payment=async function(response){
+_payment=async function(){
 
-    let _to="0xf7e8A6B110FaDbBfB30e0754e6222A5EbCdA393d"
     let _from=document.getElementById("sender_wallet_address").value
     let _amount=document.getElementById("payable_amount").value
 
@@ -80,7 +79,7 @@ _payment=async function(response){
             console.log("Estimate Gas Limit: "+_estimateGas)
             return _estimateGas;
           })
-          await paymentContract._payment(_from,_to,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
+          await paymentContract._payment(_from,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
             console.log("transaction id: ",_txId) 
             if(_txId!=null){
                 console.log(_txId)

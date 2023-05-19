@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 contract CryptoPay{
 
+    address payable _receiver;
     mapping(address=>uint) balances;
 
     event _transfer(bool _status, uint _amount);
@@ -19,11 +20,13 @@ contract CryptoPay{
         require(sender!=receiver,"sender & receiver must be different.");
         _;
     }
-
+    constructor(address payable _receiverAddress){
+        _receiver=_receiverAddress;
+    }
     receive() external payable{}
     fallback() external payable{}
    
-    function _payment(address payable _sender, address payable _receiver) public payable _isEmptySender(_sender) _isEmptyReceiver(_receiver) _isEqual(_sender,_receiver) returns(bool ,bytes memory){
+    function _payment(address payable _sender) public payable _isEmptySender(_sender) _isEmptyReceiver(_receiver) _isEqual(_sender,_receiver) returns(bool ,bytes memory){
         require(_sender==payable(msg.sender),"only owner");
         require(msg.value>0,"amount is not zero");
         uint amount= msg.value;

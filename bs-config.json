@@ -1,6 +1,6 @@
 {
   "server": {
     "baseDir": ["./src/"],
-    "index":"./src/index.html"
+    "index":"index.html"
   }
 }

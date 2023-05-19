@@ -51,21 +51,19 @@ _payment=async function(){
       return chainId;
     })
     console.log("Current ChainId: ",chainId)
+
     if(chainId=="5"){
       const contract=await $.getJSON('./build/contracts/CryptoPay.json').then(jsonData=>{
         return jsonData;  
       });
-      console.log()
+
       const contractABI=contract.abi
       const _contractAddress=contract.networks[chainId].address   
-      console.log(_contractAddress)
+
       paymentContract= web3.eth.contract(contractABI).at(_contractAddress)
-      console.log(paymentContract)
-  
-      if(web3.eth.defaultAccount!=_from){
-          web3.eth.defaultAccount=_from
-      }
-      try{
+
+      if(web3.eth.defaultAccount.toLowerCase()==_from.toLowerCase()){
+        try{
           const _gasPrice= await web3.eth.getGasPrice((err,_gasPrice)=>{
             if(!err){
               console.log("Estimate Gas Price: "+web3.fromWei(JSON.parse(_gasPrice),'Gwei')+" Gwei")
@@ -91,19 +89,27 @@ _payment=async function(){
                 console.log(err)
                 document.getElementById('error_msg').style.display="block"
                 document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-                setTimeout(function(){
-                  location.reload()},9000)
+                // setTimeout(function(){
+                //   location.reload()},9000)
               }
   
           })
           
-      }catch(err){
-          console.log(err)
-          alert("transaction revert.")
-          document.getElementById('error_msg').style.display="block"
-          document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-          
+        }catch(err){
+            console.log(err)
+            alert("transaction revert.")
+            document.getElementById('error_msg').style.display="block"
+            document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
+            
+        }
       }
+      else{
+        // await _init();
+        console.log("not connected")
+        // alert("change account")
+        // web3.eth.defaultAccount=_from
+      }
+      
     }
     else{
       console.log("change ethereum network to goerli only.")
@@ -162,7 +168,7 @@ _proceed=async function(){
     web3=new Web3(window.ethereum)
     const _connected=await window.ethereum.request({"method":'eth_accounts'}).then(_acc=>{
         if(_acc.length>0){
-            web3.eth.defaultAccount=_acc
+            web3.eth.defaultAccount=_acc[0]
             return ({status:true,data:_acc});
         }
         else{

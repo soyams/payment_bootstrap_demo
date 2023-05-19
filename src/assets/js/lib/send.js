@@ -2,22 +2,22 @@ const Web3=require('web3')
 let web3;
 
 _init=async function(){
+
     if(typeof window.ethereum!="undefined"){
         web3=new Web3(window.ethereum)
         try{
-           await window.ethereum.request({'method':'eth_requestAccounts'}).then(_account=>{
+           await window.ethereum.request({'method':'eth_requestAccounts',}).then(_account=>{
                 web3.eth.defaultAccount=_account
             })
         }
         catch(err){
             console.log(err);
             alert('No selected account found..User rejected the request')
-            // _proceed();
         }
     }
-    else if(window.web3){
-        web3=new Web3(window.web3)
-    }
+    // else if(window.web3){
+    //     web3=new Web3(window.web3)
+    // }
     else{
         console.log("install metamask")
     }
@@ -45,77 +45,75 @@ _payment=async function(){
 
     let _from=document.getElementById("sender_wallet_address").value
     let _amount=document.getElementById("payable_amount").value
-
-    let chainId=await window.ethereum.request({'method':'eth_chainId'}).then(chainId=>{
-      chainId=web3.toDecimal(chainId)
-      return chainId;
-    })
-    console.log("Current ChainId: ",chainId)
-
-    if(chainId=="5"){
-      const contract=await $.getJSON('./build/contracts/CryptoPay.json').then(jsonData=>{
-        return jsonData;  
-      });
-
-      const contractABI=contract.abi
-      const _contractAddress=contract.networks[chainId].address   
-
-      paymentContract= web3.eth.contract(contractABI).at(_contractAddress)
-
-      if(web3.eth.defaultAccount.toLowerCase()==_from.toLowerCase()){
-        try{
-          const _gasPrice= await web3.eth.getGasPrice((err,_gasPrice)=>{
-            if(!err){
-              console.log("Estimate Gas Price: "+web3.fromWei(JSON.parse(_gasPrice),'Gwei')+" Gwei")
-              return _gasPrice;
-            }
-            else{
-              console.log(err)
-            }
-          })
-          const _estimatedGas=await web3.eth.estimateGas({from:web3.eth.defaultAccount},(err,_estimateGas)=>{
-            console.log("Estimate Gas Limit: "+_estimateGas)
-            return _estimateGas;
-          })
-          await paymentContract._payment(_from,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
-            console.log("transaction id: ",_txId) 
-            if(_txId!=null){
-                console.log(_txId)
-                document.getElementById('loading').style.display="block"
-                //set a condition here
-                await _eventTransfer(_txId);
+    
+      let chainId=await window.ethereum.request({'method':'eth_chainId'}).then(chainId=>{
+        chainId=web3.toDecimal(chainId)
+        return chainId;
+      })
+      console.log("Current ChainId: ",chainId)
+  
+      if(chainId=="5"){
+        const contract=await $.getJSON('./build/contracts/CryptoPay.json').then(jsonData=>{
+          return jsonData;  
+        });
+  
+        const contractABI=contract.abi
+        const _contractAddress=contract.networks[chainId].address   
+  
+        paymentContract= web3.eth.contract(contractABI).at(_contractAddress)
+        if(web3.eth.defaultAccount.toLowerCase()==_from.toLowerCase()){
+          try{
+            const _gasPrice= await web3.eth.getGasPrice((err,_gasPrice)=>{
+              if(!err){
+                console.log("Estimate Gas Price: "+web3.fromWei(JSON.parse(_gasPrice),'Gwei')+" Gwei")
+                return _gasPrice;
               }
               else{
                 console.log(err)
-                document.getElementById('error_msg').style.display="block"
-                document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-                // setTimeout(function(){
-                //   location.reload()},9000)
               }
-  
-          })
-          
-        }catch(err){
-            console.log(err)
-            alert("transaction revert.")
-            document.getElementById('error_msg').style.display="block"
-            document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-            
+            })
+            const _estimatedGas=await web3.eth.estimateGas({from:web3.eth.defaultAccount},(err,_estimateGas)=>{
+              console.log("Estimate Gas Limit: "+_estimateGas)
+              return _estimateGas;
+            })
+            if(_from!="" && _amount.length>0){
+              await paymentContract._payment(_from,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
+                console.log("transaction id: ",_txId) 
+                if(_txId!=null){
+                    console.log(_txId)
+                    document.getElementById('loading').style.display="block"
+                    //set a condition here
+                    await _eventTransfer(_txId);
+                  }
+                  else{
+                    console.log(err)
+                    document.getElementById('error_msg').style.display="block"
+                    document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
+                    // setTimeout(function(){
+                    //   location.reload()},9000)
+                  }
+      
+              })
+            }else{
+              alert("details can't be empty.")
+            }
+          }catch(err){
+              console.log(err)
+              alert("transaction revert.")
+              document.getElementById('error_msg').style.display="block"
+              document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
+          }     
+        }
+        else{
+          web3.eth.defaultAccount=_from.toLowerCase()
+          console.log("switch account")
+          // alert("Switch Account")
         }
       }
       else{
-        // await _init();
-        console.log("not connected")
-        // alert("change account")
-        // web3.eth.defaultAccount=_from
+        console.log("change ethereum network to goerli only.")
+        alert("change ethereum network to goerli only.");
       }
-      
-    }
-    else{
-      console.log("change ethereum network to goerli only.")
-      alert("change ethereum network to goerli only.");
-    }
-    
 }
 _eventTransfer=async function(_txId){
 
@@ -154,7 +152,7 @@ _generateReceipt=async function(_txId){
       p_tag.appendChild(a_tag);
       document.getElementById("tx_id").innerHTML=_txDetails.transactionHash
       // setTimeout(function(){
-      //   location.reload()},9000)
+      //   location.reload()},20000)
     }
     else{
       console.log(err)
@@ -165,11 +163,19 @@ _generateReceipt=async function(_txId){
 
 _proceed=async function(){
 
+  let _from=document.getElementById("sender_wallet_address").value
+  if(_from!=""){
     web3=new Web3(window.ethereum)
     const _connected=await window.ethereum.request({"method":'eth_accounts'}).then(_acc=>{
         if(_acc.length>0){
-            web3.eth.defaultAccount=_acc[0]
-            return ({status:true,data:_acc});
+          web3.eth.defaultAccount=_acc[0]
+          if(web3.eth.defaultAccount.toLowerCase()==_from.toLowerCase()){
+            return ({status:true,data:web3.eth.defaultAccount});
+          }else{
+            alert("Switch & Connect Account")
+            return ({status:false});
+          }
+            // return ({status:true,data:web3.eth.defaultAccount});
         }
         else{
             return ({status:false});
@@ -184,6 +190,10 @@ _proceed=async function(){
       console.log("isConnected: "+_connected.status+" & connectedAccount: "+_connected.data)
       await _payment();
     }
+  }
+  else{
+    alert("details cann't be empty")
+  }
 }
 
 // $("document").on('ready',function(){

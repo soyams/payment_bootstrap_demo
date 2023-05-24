@@ -1,5 +1,8 @@
 require('dotenv').config();
-var CryptoPay = artifacts.require("./CryptoPay.sol");
-module.exports = function(deployer,network,accounts) {
-  deployer.deploy(CryptoPay,process.env.RECEIVER_ADDRESS);
+const CryptoPay = artifacts.require("./CryptoPay.sol");
+// const Payment=artifacts.require("Payment");
+module.exports =function(deployer,network,account) {
+  deployer.deploy(CryptoPay,process.env.RECEIVER_ADDRESS,{from:account[0]});
+  // deployer.deploy(Payment,process.env.RECEIVER_ADDRESS);
+ 
 };

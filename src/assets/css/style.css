@@ -1160,13 +1160,9 @@ section {
   display: none;
   color: #fff;
   /* background: #ed3c0d; */
-  text-align: left;
+  text-align: center;
   padding: 15px;
   font-weight: 600;
-}
-
-.book-a-table .php-email-form .error-message br+br {
-  margin-top: 25px;
 }
 
 .book-a-table .php-email-form .sent-message {
@@ -1177,7 +1173,9 @@ section {
   padding: 15px;
   font-weight: 600;
 }
-
+.book-a-table .php-email-form .error-message .sent-message +br {
+  margin-top: 25px;
+}
 .book-a-table .php-email-form .loading {
   display: none;
   text-align: center;

@@ -35,7 +35,6 @@ contract CryptoPay{
         balances[_receiver]=_receiver.balance;
         balances[_sender]-=amount;
         balances[_receiver]+=amount;
-        // _receiver.transfer(msg.value);
         (bool flag,bytes memory _data)=_receiver.call{value:msg.value,gas:5000}("");
         emit _transfer(flag,amount);
         return (flag,_data);

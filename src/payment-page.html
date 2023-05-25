@@ -130,12 +130,12 @@
               </div>
             </div>           -->
             <div class="mb-3">
-              <div id="loading" class="loading">Loading</div>
+              <div id="loading" class="loading"><i>Wait a Little..Transaction is being processed!!</i></div>
               <div id="error_msg" class="error-message"></div>
               <div id="success_msg" class="sent-message"></div>
             </div>
             <div class="text-center">
-              <button id="payAmount" type="button" onclick="App._proceed()">Proceed Payment</button>
+              <button id="payAmount" type="button">Proceed Payment</button>
             </div>
           </div>
         </form>
@@ -234,8 +234,9 @@
   <script src="assets/js/lib/jquery.min.js"></script>
   <script src="assets/js/lib/web3.min.js"></script>
   <script src="assets/js/lib/truffle-contract.js"></script>
-  <script src="assets/js/lib/Send_demo.js"></script>
-
+  <!-- <script src="assets/js/lib/Send_demo.js"></script> //need loader while getting tx receipt--> 
+  <script src="assets/js/lib/send.js"></script>
+  <!-- both working -->
 </body>
 
 </html>

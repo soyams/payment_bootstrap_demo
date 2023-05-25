@@ -1,5 +1,5 @@
 {
-  "name": "payment_demo",
+  "name": "payment_with_theme_demo",
   "version": "1.0.0",
   "main": "truffle-config.js",
   "directories": {

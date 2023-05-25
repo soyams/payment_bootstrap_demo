@@ -1,3 +1,9 @@
+$(document).on('ready',function(){
+  $("#payAmount").on('click',function(){
+    App._proceed()
+  })
+})
+
 const Web3=require('web3');
 let web3;
 App = {
@@ -87,7 +93,6 @@ App = {
               // });
 
                 App.contract.transaction_contract.deployed().then(async _instance=>{
-                  console.log(_instance)
                   const _estimatedGas=await _instance._payment.estimateGas(_from,{from:_from,gas:4000000,value:web3.toWei(parseFloat(_amount),"ether")}).then(_estimatedGas=>{
                     return ({status:true,data:_estimatedGas});
                   }).catch(err=>{
@@ -96,7 +101,6 @@ App = {
                   })
                   if(_estimatedGas.status!=false)
                   {
-                    // document.getElementById('loading').style.display="block"
                     Promise.resolve(_instance._payment(_from,{from:_from,gas:_estimatedGas.data,value:web3.toWei(parseFloat(_amount),"ether")})).then(_txDetails=>{
                       console.log(_txDetails)
                       document.getElementById('loading').style.display="block"
@@ -123,6 +127,8 @@ App = {
                     }).catch(function(err){
                       console.log(err.message);
                       alert("Error message: "+err.message)
+                      document.getElementById('success_msg').style.display="none"
+                      document.getElementById('success_msg').innerHTML=""
                       document.getElementById('error_msg').style.display="block"
                       document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
                     })

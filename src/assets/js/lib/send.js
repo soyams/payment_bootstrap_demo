@@ -1,21 +1,26 @@
+$(document).on('ready',function(){
+  $("#payAmount").on('click',function(){
+    _proceed()
+  })
+})
+
+
 const Web3=require('web3')
 let web3;
 
 _init=async function(){
 
     if(typeof window.ethereum!="undefined"){
-        web3=new Web3(window.ethereum)
-        try{
-           await window.ethereum.request({'method':'eth_requestAccounts',}).then(_account=>{
-                web3.eth.defaultAccount=_account
-            })
-        }
-        catch(err){
-            console.log(err);
-            alert('No selected account found..User rejected the request')
-            document.getElementById('error_msg').style.display="block"
-            document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-        }
+      web3=new Web3(window.ethereum)
+
+      Promise.resolve(window.ethereum.request({'method':'eth_requestAccounts',})).then(_account=>{
+          web3.eth.defaultAccount=_account
+      }).catch(err=>{
+          console.log(err)
+          alert("Error message: "+err.message)
+          document.getElementById('error_msg').style.display="block"
+          document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
+      })
     }
     // else if(window.web3){
     //     web3=new Web3(window.web3)
@@ -25,10 +30,13 @@ _init=async function(){
     }
 
     window.ethereum.on('chainChanged',(_chainId)=>{
-        this._getAccount();
+      alert("Selected chain changed")
+      this._getAccount();
     })
     window.ethereum.on('accountsChanged',(_account)=>{
-        this._getAccount();
+      alert("Selected account changed")
+      web3.eth.defaultAccount=_account[0];//comment it
+      this._getAccount();
     })
     // this._getAccount();
 },
@@ -42,7 +50,35 @@ _getAccount=async function(){
     })
     _payment();
 },
+_checkForReceipt=function(txId){
+  return new Promise(function(accept, reject) {
+      var timeout = 30000;//30seconds
+      var start = new Date().getTime();
 
+      var make_attempt = function() {
+        
+            web3.eth.getTransactionReceipt(txId, function(err, receipt) {
+              if (err){
+                console.log(err)
+                return reject(err);}
+
+              if (receipt != null) {
+                // console.log(receipt)
+                return accept(receipt);
+              }
+             
+              if (timeout > 0 && new Date().getTime() - start > timeout) {
+                
+                let _err=new Error("Transaction wasn't processed in " + (timeout / 1000) + " seconds!")
+                return reject(_err);
+              }
+           
+              setTimeout(make_attempt, 1000);
+            });
+      };
+      make_attempt(); 
+  })
+},
 _payment=async function(){
 
     let _from=document.getElementById("sender_wallet_address").value
@@ -63,7 +99,6 @@ _payment=async function(){
       const _contractAddress=contract.networks[chainId].address   
 
       paymentContract=web3.eth.contract(contractABI).at(_contractAddress)
-      console.log(paymentContract)
 
       if(web3.eth.defaultAccount.toLowerCase()==_from.toLowerCase()){
 
@@ -80,48 +115,90 @@ _payment=async function(){
             }
           })
 
-          const _estimatedGas=await paymentContract._payment.estimateGas(_from,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},(err,_estimateGas)=>{
+          await paymentContract._payment.estimateGas(_from,{from:web3.eth.defaultAccount,value:web3.toWei(_amount,'ether')},async (err,_estimateGas)=>{
             if(!err){
               console.log("Estimate Gas Limit: "+_estimateGas)
-              return _estimateGas;
-            }
-            else{
-              console.log(err)
-            }
-            
-          })
-
-          try
-          {
-            await paymentContract._payment(_from,{from:web3.eth.defaultAccount,value:web3.toWei(parseFloat(_amount),'ether'),gas:_estimatedGas},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
-
-              if(_txId!=null){
-                  console.log(_txId)
+              await paymentContract._payment(_from,{from:web3.eth.defaultAccount,value:web3.toWei(parseFloat(_amount),'ether'),gas:_estimateGas},async function(err,_txId){//gas:_estimatedGas,gasPrice:_gasPrice
+                console.log("Transaction Id: ",_txId)
+                if(!err && _txId!=null){
+                  alert("Transaction Id: "+_txId+" & Current Status: Pending")
                   document.getElementById('loading').style.display="block"
-                  //set a condition here to execute events
-                  await _eventTransfer(_txId);
-                  // await _eventRevert();
+                  
+                  try{
+                    _txS=await _checkForReceipt(_txId)
+                      if(_txS.status=='0x1')
+                      {
+                        await _eventTransfer(_txId,_txS);
+                      }
+                      else{
+                        console.log("Transaction Receipt: ",_txS)
+                        document.getElementById('loading').style.display="none"
+                        _txStatus=(_txS.status=='0x1')?"Done":"Fail"
+                        alert("Transaction Id: "+_txS.transactionHash+" & Transaction Status: "+_txStatus)
+                        setTimeout(await _generateReceipt(_txS),3000)
+                      }
+                  }
+                  catch(err){
+
+                    err=err.toString().split(":")
+                    err=err.slice(1)
+                    err=err.join(":")
+                    alert(err+" So, Transaction Receipt will be mailed to you!!")
+
+                    let networkName="";
+                    if(chainId=='5'){
+                      networkName='goerli'
+                    }
+                    else if(chainId=='11155111'){
+                      networkName='sepolia'
+                    }
+                    if(networkName!=""){
+                      document.getElementById('loading').style.display="none"
+                      document.getElementById('success_msg').style.display="none"
+                      document.getElementById('success_msg').innerHTML=""
+                      document.getElementById('error_msg').style.display="block"
+                      document.getElementById('error_msg').innerHTML="Message: "+err+".. Check here: "
+                      p_tag=document.getElementById('error_msg')
+                      a_tag=document.createElement("a")
+                      a_tag.setAttribute('href',"https://"+networkName+".etherscan.io/tx/"+_txId)
+                      a_tag.setAttribute('id','tx_id')
+                      a_tag.setAttribute('target','_blank')
+                      p_tag.appendChild(a_tag);
+                      document.getElementById("tx_id").innerHTML=_txId
+                      setTimeout(function(){
+                        location.reload()},40000)
+                   
+                    }
+                    else{
+                      console.log("Switch to goerli or sepolia only")
+                    }
+                  }
                 }
                 else{
                   console.log(err)
+                  alert("transaction revert.")
+                  document.getElementById('success_msg').style.display="none"
+                  document.getElementById('success_msg').innerHTML=""
                   document.getElementById('error_msg').style.display="block"
-                  document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
-                 
-                  // setTimeout(function(){
-                  //   location.reload()},9000)
-                }
-    
-            })
-          }
-          catch(err)
-          {
-            console.log(err)
-            alert("transaction revert.")
-            document.getElementById('error_msg').style.display="block"
-            document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message
+                  document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message   
+                  setTimeout(function(){
+                    location.reload()},10000) 
+                }   
+              })
+            }
+            else{
+              console.log(err)
+              alert("Transaction Revert..")
+              document.getElementById('success_msg').style.display="none"
+              document.getElementById('success_msg').innerHTML=""
+              document.getElementById('error_msg').style.display="block"
+              document.getElementById('error_msg').innerHTML="Error Code: "+err.code+" & Error Message: "+err.message  
+              setTimeout(function(){
+                location.reload()},10000) 
+            }
             
-          }   
-            
+          })
+          
         }
         else{
           alert("details can't be empty.")
@@ -129,6 +206,8 @@ _payment=async function(){
       }
       else{
         web3.eth.defaultAccount=_from.toLowerCase()
+        // alert('Switch & Connect account')
+        // console.log('switch & connect')
 
       }
     }
@@ -137,28 +216,8 @@ _payment=async function(){
       alert("change ethereum network to goerli or sepolia only.");
     }
 }
-// _eventRevert=async function(){
 
-//   try{
-//     paymentContract._revertTransaction({
-//       'toBlock':'latest'
-//     }).watch(async (err,_data)=>{
-//         if(!err){
-//           console.log("event data: ",_data)
-//           document.getElementById('loading').style.display="none"
-//           alert("Payment Status: "+_data.args._status+" & Failure Cause: "+_data.args.reason)
-//           setTimeout(await _generateReceipt(_data.transactionHash),3000)
-//         }
-//         else{
-//           console.log("event error: ",err)
-//         }
-//     })
-//   }
-//   catch(err){
-//     console.log(err)
-//   }
-// }
-_eventTransfer=async function(_txId){
+_eventTransfer=async function(_txId,_txDetails){
 
   try{
     paymentContract._transfer({},{
@@ -166,9 +225,9 @@ _eventTransfer=async function(_txId){
     }).watch(async (err,_data)=>{
         if(!err){
           console.log("event data: ",_data)
-        document.getElementById('loading').style.display="none"
-        alert("Payment Status: "+_data.args._status+" & Paid Amount: "+web3.fromWei(JSON.parse(_data.args._amount),'ether'))
-        setTimeout(await _generateReceipt(_data.transactionHash),3000)
+          document.getElementById('loading').style.display="none"
+          alert("Payment Status: "+_data.args._status+" & Paid Amount: "+web3.fromWei(JSON.parse(_data.args._amount),'ether'))
+          setTimeout(await _generateReceipt(_txDetails),3000)
         }
         else{
           console.log("event error: ",err)
@@ -180,13 +239,13 @@ _eventTransfer=async function(_txId){
     console.log(err)
   }
 }
-_generateReceipt=async function(_txId){
+_generateReceipt=async function(_txDetails){
 
   let chainId=await window.ethereum.request({'method':'eth_chainId'}).then(chainId=>{
     chainId=web3.toDecimal(chainId)
     return chainId;
   })
-  console.log(chainId)
+
   let networkName="";
   if(chainId=='5'){
     networkName='goerli'
@@ -194,34 +253,32 @@ _generateReceipt=async function(_txId){
   else if(chainId=='11155111'){
     networkName='sepolia'
   }
-  console.log(networkName)
-  if(networkName!=""){
-    await web3.eth.getTransactionReceipt(_txId,(err,_txDetails)=>{
-      console.log(_txDetails)
-      _txStatus=(_txDetails.status=='0x1')?"Done":"Fail"
-      if(!err){
-        document.getElementById('error_msg').style.display="none"
-        document.getElementById('success_msg').style.display="block"
-        document.getElementById('success_msg').innerHTML="Payment Status: "+_txStatus+" & TransactionHash: "
-        p_tag=document.getElementById('success_msg')
-        a_tag=document.createElement("a")
-        a_tag.setAttribute('href',"https://"+networkName+".etherscan.io/tx/"+_txDetails.transactionHash)
-        a_tag.setAttribute('id','tx_id')
-        a_tag.setAttribute('target','_blank')
-        p_tag.appendChild(a_tag);
-        document.getElementById("tx_id").innerHTML=_txDetails.transactionHash
-        // setTimeout(function(){
-        //   location.reload()},20000)
-      }
-      else{
-        console.log(err)
-      }
-      
-    })
+
+  if(networkName!="")
+  {
+    _txStatus=(_txDetails.status=='0x1')?"Done":"Fail"
+    let selected_element='success_msg'
+    let unselected_element="error_msg"
+    if(_txStatus=='Fail')
+    {
+      selected_element='error_msg'
+      unselected_element="success_msg"
+    }
+    document.getElementById(unselected_element).style.display="none"
+    document.getElementById(selected_element).style.display="block"
+    document.getElementById(selected_element).innerHTML="Payment Status: "+_txStatus+" & TransactionHash: "
+    p_tag=document.getElementById(selected_element)
+    a_tag=document.createElement("a")
+    a_tag.setAttribute('href',"https://"+networkName+".etherscan.io/tx/"+_txDetails.transactionHash)
+    a_tag.setAttribute('id','tx_id')
+    a_tag.setAttribute('target','_blank')
+    p_tag.appendChild(a_tag);
+    document.getElementById("tx_id").innerHTML=_txDetails.transactionHash
+    setTimeout(function(){
+      location.reload()},30000)
   }
   else{
     console.log("network must either goerli or sepolia.")
-    
   }
  
 }
